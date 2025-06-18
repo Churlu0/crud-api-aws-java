@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Películas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f2f2f2;
+            padding: 30px;
+            margin: 0;
+        }
+
+        h1, h3 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            max-width: 500px;
+            margin: 0 auto 40px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            margin-bottom: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .action-btn {
+            margin: 0 4px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            color: white;
+        }
+
+        .edit-btn {
+            background-color: #2ecc71;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+
+        @media (max-width: 768px) {
+            table, form {
+                width: 100%;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<h1>Gestor de Películas</h1>
+
+<form id="pelicula-form">
+    <input type="hidden" id="id">
+    <label>Título:
+        <input type="text" id="title" required>
+    </label>
+    <label>Director:
+        <input type="text" id="director" required>
+    </label>
+    <label>Género:
+        <input type="text" id="gender" required>
+    </label>
+    <label>Año:
+        <input type="number" id="year" required>
+    </label>
+    <label>Calificación:
+        <input type="number" id="rating" min="1" max="10" step="0.1" required>
+    </label>
+    <button type="submit">Guardar Película</button>
+</form>
+<div style="text-align:center; margin-bottom: 20px;">
+    <input type="text" id="buscar-titulo" placeholder="Buscar por título..." style="padding: 8px; width: 200px; margin-right: 10px;">
+    <button onclick="buscarPorTitulo()">🔍</button>
+
+    <input type="text" id="buscar-director" placeholder="Buscar por director..." style="padding: 8px; width: 200px; margin-left: 20px; margin-right: 10px;">
+    <button onclick="buscarPorDirector()">🎬</button>
+
+    <button onclick="cargarPeliculas()" style="margin-left: 20px;">🔄 Mostrar Todos</button>
+</div>
+
+<h3>Lista de Películas</h3>
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Título</th>
+        <th>Director</th>
+        <th>Género</th>
+        <th>Año</th>
+        <th>Calificación</th>
+        <th>Acciones</th>
+    </tr>
+    </thead>
+    <tbody id="peliculas-body"></tbody>
+</table>
+
+<script>
+    const apiUrl = 'http://18.117.92.90:8080/movie';
+
+    document.addEventListener('DOMContentLoaded', cargarPeliculas);
+    document.getElementById('pelicula-form').addEventListener('submit', guardarPelicula);
+
+    async function cargarPeliculas() {
+        const res = await fetch(apiUrl);
+        const peliculas = await res.json();
+        const tbody = document.getElementById('peliculas-body');
+        tbody.innerHTML = '';
+        peliculas.forEach((p, index) => {
+            tbody.innerHTML += `
+          <tr>
+            <td>${p.id}</td>
+            <td>${p.title}</td>
+            <td>${p.director}</td>
+            <td>${p.gender}</td>
+            <td>${p.year}</td>
+            <td>${p.rating}</td>
+            <td>
+              <button class="action-btn edit-btn" onclick='editar(${JSON.stringify(p)})'>Editar</button>
+              <button class="action-btn delete-btn" onclick='eliminar(${p.id})'>Eliminar</button>
+            </td>
+          </tr>
+        `;
+        });
+    }
+
+    async function guardarPelicula(e) {
+        e.preventDefault();
+        const id = document.getElementById('id').value;
+        const pelicula = {
+            id: id ? parseInt(id) : undefined,
+            title: document.getElementById('title').value,
+            director: document.getElementById('director').value,
+            gender: document.getElementById('gender').value,
+            year: parseInt(document.getElementById('year').value),
+            rating: parseFloat(document.getElementById('rating').value)
+        };
+
+        const method = id ? 'PUT' : 'POST';
+
+        await fetch(apiUrl, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pelicula)
+        });
+
+        document.getElementById('pelicula-form').reset();
+        document.getElementById('id').value = '';
+        cargarPeliculas();
+    }
+
+    function editar(p) {
+        document.getElementById('id').value = p.id;
+        document.getElementById('title').value = p.title;
+        document.getElementById('director').value = p.director;
+        document.getElementById('gender').value = p.gender;
+        document.getElementById('year').value = p.year;
+        document.getElementById('rating').value = p.rating;
+    }
+
+    async function eliminar(id) {
+        if (confirm('¿Seguro que deseas eliminar esta película?')) {
+            await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+            cargarPeliculas();
+        }
+    }
+
+    async function buscarPorTitulo() {
+        const titulo = document.getElementById('buscar-titulo').value;
+        if (!titulo) return alert('Ingresa un título para buscar.');
+
+        const res = await fetch(`${apiUrl}/find-by-title?title=${encodeURIComponent(titulo)}`);
+        const peliculas = await res.json();
+        mostrarPeliculas(peliculas);
+    }
+
+    async function buscarPorDirector() {
+        const director = document.getElementById('buscar-director').value;
+        if (!director) return alert('Ingresa un director para buscar.');
+
+        const res = await fetch(`${apiUrl}/find-by-director?director=${encodeURIComponent(director)}`);
+        const peliculas = await res.json();
+        mostrarPeliculas(peliculas);
+    }
+
+    function mostrarPeliculas(peliculas) {
+        const tbody = document.getElementById('peliculas-body');
+        tbody.innerHTML = '';
+        peliculas.forEach((p, index) => {
+            tbody.innerHTML += `
+      <tr>
+        <td>${p.id}</td>
+        <td>${p.title}</td>
+        <td>${p.director}</td>
+        <td>${p.gender}</td>
+        <td>${p.year}</td>
+        <td>${p.rating}</td>
+        <td>
+          <button class="action-btn edit-btn" onclick='editar(${JSON.stringify(p)})'>Editar</button>
+          <button class="action-btn delete-btn" onclick='eliminar(${p.id})'>Eliminar</button>
+        </td>
+      </tr>
+    `;
+        });
+    }
+
+</script>
+</body>
+</html>
